@@ -1,3 +1,50 @@
+// --- Live Chat Feature ---
+import Chat from '../models/chat.model.js';
+
+// @desc    Send chat message
+// @route   POST /api/chat/send
+// @access  Private
+export const sendChatMessage = async (req, res) => {
+  try {
+    const { recipientId, message, fileUrl, projectId } = req.body;
+    if (!recipientId || !message) {
+      return res.status(400).json({ status: 'error', message: 'Recipient and message required' });
+    }
+    const chatMsg = await Chat.create({
+      sender: req.user.id,
+      recipient: recipientId,
+      message,
+      fileUrl,
+      project: projectId || null
+    });
+    res.status(201).json({ status: 'success', data: chatMsg });
+  } catch (error) {
+    console.error('Send chat error:', error);
+    res.status(500).json({ status: 'error', message: 'Error sending chat message' });
+  }
+};
+
+// @desc    Get chat messages between two users
+// @route   GET /api/chat/:userId
+// @access  Private
+export const getChatMessages = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { projectId } = req.query;
+    const query = {
+      $or: [
+        { sender: req.user.id, recipient: userId },
+        { sender: userId, recipient: req.user.id }
+      ]
+    };
+    if (projectId) query.project = projectId;
+    const messages = await Chat.find(query).sort({ createdAt: 1 });
+    res.status(200).json({ status: 'success', data: messages });
+  } catch (error) {
+    console.error('Get chat error:', error);
+    res.status(500).json({ status: 'error', message: 'Error fetching chat messages' });
+  }
+};
 import Freelancer from '../models/freelancer.model.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';

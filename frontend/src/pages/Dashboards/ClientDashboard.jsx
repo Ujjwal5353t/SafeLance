@@ -1,5 +1,55 @@
-import { BarChart3, Briefcase, DollarSign, Edit, Settings, User, Users, Award, Plus, MessageSquare, Search, ImportIcon } from "lucide-react";
+import { BarChart3, Briefcase, DollarSign, Edit, Settings, User, Users, Award, Plus, MessageSquare, Search, ImportIcon, Upload, X } from "lucide-react";
 import { useState } from "react";
+// Simple chat modal for prototype/file sharing
+const ChatModal = ({ open, onClose, project, onSend }) => {
+  const [messages, setMessages] = useState([
+    { sender: "Freelancer", text: "Hi! Here is the first prototype." }
+  ]);
+  const [input, setInput] = useState("");
+  const [file, setFile] = useState(null);
+
+  const handleSend = () => {
+    if (input.trim() || file) {
+      setMessages([...messages, { sender: "Freelancer", text: input, file }]);
+      setInput("");
+      setFile(null);
+      if (onSend) onSend(input, file);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
+        <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" onClick={onClose}><X className="h-5 w-5" /></button>
+        <h2 className="text-xl font-bold mb-2 text-emerald-700">Chat with Client</h2>
+        <div className="mb-2 text-sm text-gray-600">Project: <span className="font-semibold">{project?.title}</span></div>
+        <div className="border rounded-lg p-3 mb-4 h-40 overflow-y-auto bg-gray-50">
+          {messages.map((msg, i) => (
+            <div key={i} className="mb-2">
+              <span className="font-semibold text-emerald-700">{msg.sender}:</span> {msg.text}
+              {msg.file && <div className="mt-1 text-xs text-blue-600">📎 {msg.file.name}</div>}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 border rounded px-3 py-2"
+          />
+          <label className="cursor-pointer">
+            <Upload className="h-5 w-5 text-blue-600" />
+            <input type="file" className="hidden" onChange={e => setFile(e.target.files[0])} />
+          </label>
+          <button onClick={handleSend} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold">Send</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 import { useAuth } from "../../context/AuthProvider";
 import { Link } from "react-router-dom";
 import { Button } from "../../components/Button";
@@ -53,6 +103,7 @@ const ClientDashboard = () => {
   ]);
 
   const [selectedProject , setSelectedProject] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const GetStatusColor = (status) => {
     switch (status) {
@@ -68,18 +119,22 @@ const ClientDashboard = () => {
   };
 
   const handleUpdateProject = (updatedProject) => {
-  
-  if( updatedProject.progress === 100 ){
-    updatedProject.status = "Completed";
-  } else{
-    updatedProject.status = "In Progress"
-  }
-  
+    if( updatedProject.progress === 100 ){
+      updatedProject.status = "Completed";
+    } else{
+      updatedProject.status = "In Progress"
+    }
     setActiveProjects((prev) =>
-    prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-  );
-  setSelectedProject(updatedProject); 
-};
+      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+    );
+    setSelectedProject(updatedProject); 
+  };
+
+  // Chat send handler (could be extended to backend)
+  const handleSendChat = (msg, file) => {
+    // For now, just log
+    console.log("Chat sent:", msg, file);
+  };
 
 
   return (
@@ -263,7 +318,6 @@ const ClientDashboard = () => {
                 <div
                   key={project.id}
                   className="bg-white rounded-2xl shadow-md border border-green-100 p-6 flex flex-col"
-                  onClick={() => setSelectedProject(project)}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <Avatar>
@@ -282,9 +336,19 @@ const ClientDashboard = () => {
                     </Badge>
                     <span className="text-xs text-slate-500">Due {project.deadline}</span>
                   </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button size="sm" variant="outline" className="bg-white/40 border-green-200" onClick={() => { setSelectedProject(project); setChatOpen(true); }}>
+                      <MessageSquare className="h-4 w-4 mr-1" /> Chat
+                    </Button>
+                    <Button size="sm" variant="outline" className="bg-white/40 border-green-200" onClick={() => setSelectedProject(project)}>
+                      <Upload className="h-4 w-4 mr-1" /> Deliver
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
+            {/* Chat Modal */}
+            <ChatModal open={chatOpen} onClose={() => setChatOpen(false)} project={selectedProject} onSend={handleSendChat} />
           </section>
         )}
 
